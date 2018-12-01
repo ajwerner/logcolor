@@ -1,0 +1,4 @@
+github.com/lucasb-eyer/go-colorful v0.0.0-20181028223441-12d3b2882a08 h1:5MnxBC15uMxFv5FY/J/8vzyaBiArCOkMdFT9Jsw78iY=
+github.com/lucasb-eyer/go-colorful v0.0.0-20181028223441-12d3b2882a08/go.mod h1:NXg0ArsFk0Y01623LgUqoqcouGDB+PwCCQlrwrG6xJ4=
+github.com/wayneashleyberry/truecolor v1.0.0 h1:LLo8HWexMssG7r/f9KUwHe1DC8AR7ZWnRTwDxRFVUN8=
+github.com/wayneashleyberry/truecolor v1.0.0/go.mod h1:EW2t+p4Ox2UhK82yOLRvHzhR4rl6UYZUL6h0iILCP2E=

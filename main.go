@@ -110,8 +110,8 @@ func (m *colorMap) getColor(s string) *color.Message {
 	f2 := float64(binary.BigEndian.Uint64(sum[:8])) / math.MaxUint64
 	f3 := float64(binary.LittleEndian.Uint64(sum[4:])) / math.MaxUint64
 	h := 360 * f1
-	c := .2 + .3*f2
-	l := .6 + .3*f3
+	c := .33 + .2*f2
+	l := .6 + .30*f3
 	col := color.Color(colorful.Hcl(h, c, l).Clamped().RGB255())
 	(*m)[s] = col
 	return col

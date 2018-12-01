@@ -1,7 +1,7 @@
 // Copyright 2018 Andrew Werner, All Rights Reserved.
 
 // Command logcolor is used to rewrite log messages with a stable terminal color
-// palette.
+// palette, specifically for colorizing merged cockroachdb logs.
 package main
 
 import (
@@ -20,17 +20,18 @@ import (
 	"github.com/wayneashleyberry/truecolor/pkg/color"
 )
 
+//go:generate go doc '"github.com/ajwerner/logcolor".LogEntry
+
 func main() {
 	headerPattern := flag.String("log-header-pattern", `(?m)^(?P<prefix>^[\w_\-.]+> )(?P<header>([IWEF])(\d{6} \d{2}:\d{2}:\d{2}.\d{6}) (?:(\d+) )?([^:]+):(\d+))`, "Capture group for log header")
-	outTemplate := flag.String("output-template",
-		`{{ with $p := .Match "prefix" }}{{ with $c := color $p }}{{ $.Match "header" | printf "%s%s" $p | $c.Sprint  }}{{ end }}{{ end }}{{.Message}}`, "Golang text template for outputting the body., object will be "+
-			`
-type Entry struct {
-    Pattern *regexp.Regexp
-    Match   [][]string
-    Header  string
-    Message string
-}`)
+	outTemplate := flag.String("output-template", `
+{{- with $p := .Match "prefix" -}}
+{{- with $c := color $p -}}
+{{ $.Match "header" | printf "%s%s" $p | $c.Sprint  }}
+{{- end -}}
+{{- end -}}
+{{- .Message -}}`,
+		"Golang text template for outputting the body.")
 	flag.Parse()
 	pattern, err := regexp.Compile(*headerPattern)
 	dieIf(err)
@@ -70,11 +71,13 @@ func dieIf(err error) {
 	}
 }
 
+// LogEntry is the root element passed to the output template
 type LogEntry struct {
 	Entry
-	subexpNames map[string]int
-
+	// Pattern is the Regexp which captured the header.
 	Pattern *regexp.Regexp
+
+	subexpNames map[string]int
 }
 
 func (le *LogEntry) Match(capture string) (string, error) {

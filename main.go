@@ -15,6 +15,7 @@ import (
 	"os"
 	"regexp"
 	"text/template"
+	"time"
 
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/wayneashleyberry/truecolor/pkg/color"
@@ -43,7 +44,7 @@ func main() {
 
 	dieIf(err)
 	// then we want to open the out file,
-	r := os.Stdin
+	r := NewBufferedReader(os.Stdin, 10*time.Millisecond)
 	d := NewEntryDecoder(pattern, r)
 	le := LogEntry{
 		Pattern:     pattern,
@@ -57,6 +58,9 @@ func main() {
 			err := tmpl.Execute(os.Stdout, &le)
 			dieIf(err)
 		case io.EOF:
+			d = NewEntryDecoder(pattern, r)
+			continue
+		case io.ErrUnexpectedEOF:
 			return
 		default:
 			dieIf(err)

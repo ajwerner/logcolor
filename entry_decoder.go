@@ -21,9 +21,87 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"regexp"
+	"sync"
+	"time"
 )
+
+// NewBufferedReader returns allows a reader with an idle timeout reading from
+// a blocking stream. Buffered reader is not safe for concurrent use.
+// If the underlying stream would block for at least idleTimeout without the
+// buffer being filled, io.EOF will be returned. When the underlying reader
+// sends io.EOF the returned reader will return io.ErrUnexpectedEOF. If any
+// other error is returned,
+func NewBufferedReader(r io.Reader, idleTimeout time.Duration) io.Reader {
+	br := &bufferedReader{
+		r:       r,
+		timeout: idleTimeout,
+		ready:   make(chan chan struct{}),
+	}
+	go func() {
+		_, err := io.Copy(br, r)
+		br.mu.Lock()
+		defer br.mu.Unlock()
+		if err == io.EOF {
+			br.err = io.ErrUnexpectedEOF
+		} else {
+			br.err = err
+		}
+		br.r = nil
+	}()
+	return br
+}
+
+type bufferedReader struct {
+	r       io.Reader
+	mu      sync.Mutex
+	ready   chan chan struct{}
+	err     error
+	buf     bytes.Buffer
+	timeout time.Duration
+}
+
+func (r *bufferedReader) Read(buf []byte) (n int, err error) {
+	c := make(chan struct{}, 1)
+	for {
+		var thisN int
+		r.mu.Lock()
+		if r.err != nil {
+			r.mu.Unlock()
+			return n, err
+		}
+		thisN, err = r.buf.Read(buf)
+		r.mu.Unlock()
+		n += thisN
+		if err == nil || err != io.EOF {
+			return n, err
+		}
+
+		// on EOF we want to block a bit before we return EOF
+		select {
+		case r.ready <- c:
+			<-c
+		case <-time.After(r.timeout):
+			return
+		}
+	}
+}
+
+func (r *bufferedReader) Write(data []byte) (n int, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var c chan<- struct{}
+	select {
+	case c = <-r.ready:
+	default:
+	}
+	if c != nil {
+		defer func() { c <- struct{}{} }()
+	}
+	return r.buf.Write(data)
+}
 
 type Entry struct {
 	Header  string
